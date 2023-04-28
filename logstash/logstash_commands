@@ -1,0 +1,54 @@
+##### logstash process handling
+sudo systemctl start logstash.service
+sudo systemctl stop logstash.service
+sudo systemctl restart logstash.service
+sudo systemctl status logstash.service
+
+#### logstash testing
+./logstash -e 'input { stdin { } } output { stdout { } }'
+./logstash -f /home/test.conf
+
+### logstash plugin list
+./logstash-plugin list --verbose
+
+### logtash api call
+curl -XGET 'localhost:9600/_node/stats/pipelines?pretty'  -- et each pipeline details
+curl -XGET 'localhost:9600/_node/stats/pipelines/testpipeline?pretty' -- get detail of pipeline testpipeline
+
+### logstash autstart on reboot
+systemctl enable logstash.service
+systemctl disable logstash.service
+
+
+###logstash conf folder 
+/etc/logstash/conf.d
+
+### logstash log path
+/var//log/logstash
+tail -f /var/log/logstash/logstash-plain.log | grep testpipeline
+
+
+### port open by logstash
+
+lsof -i -P | grep logstash | grep *: | sort -u -k9
+
+
+## update logstash ofig without restart
+kill -SIGHUP `ps -ef | grep -v grep | grep 'logstash/jdk/bin/java' | awk '{print $2}'`
+
+## kill logstash process
+kill -9 `ps -ef | grep -v grep | grep 'logstash/jdk/bin/java' | awk '{print $2}'`
+
+
+## deleting old logstash log
+
+crontab entry:
+00 05 * * * bash /home/logstash_log_delete.sh > /dev/null
+
+logstash_log_delete.sh:
+find /var/log/logstash -mtime +7 -name "*.log.gz" -exe rm -rf {} \;
+
+
+### logstash process detail
+cat /proc/`ps -ef | grep -v grep | grep 'logstash/jdk/bin/java' | awk '{print $2}'`/limits
+ls -l /proc/`ps -ef | grep -v grep | grep 'logstash/jdk/bin/java' | awk '{print $2}'`/fd | wc -l

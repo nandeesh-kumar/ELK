@@ -1,0 +1,96 @@
+## list of output plugin
+https://www.elastic.co/guide/en/logstash/current/output-plugins.html
+
+
+## output to file
+output {
+   file {
+      path => "/tmp/outlog.log"
+   }
+}
+
+
+## output to tcp
+output {
+   tcp {
+      host => "remot host ip"
+      port => "remote port"
+      id => "name for the outpu"
+      codec => "json_lines"
+      # codec => line { format => "%{message}" } # can be used to send the input content without any change to destination.
+   }
+}
+
+## output to udp
+output {
+   udp {
+      host => "remot host ip"
+      port => "remote port"
+      id => "name for the outpu"
+      codec => "json_lines"
+   }
+}
+
+## output to s3
+# want to store the data in s3 in following location https://s3.test.com/test_bucket/security/testlogs/2020/01/25/16
+output{
+s3{
+access_key_id => "acces_key"
+secret_access_key => "secret_key"
+region => "bucket region"
+bucket => "bucket name"
+endpoint => "https://s3.test.com"
+prefix => "test_bucket/security/testlogs/%{[@metadata][path_year]}/%{[@metadata][path_month]}/%{[@metadata][path_day]}/%{[@metadata][path_hour]}" # @metadata is set in filter
+encoding => "gzip" # logs will be zipped and stored in S3
+temporary_directory => "/tmp/logstash/s3/output"
+time_file => "5" # every 5 min the data is moved to s3
+
+}
+}
+
+## output to kafka
+output {
+   kafka {
+      bootstrat_servers => "*.*.*.*:9092,*.*.*.*:9092"
+      topic_id => "kafka_topic"
+      codec => "json_lines"
+      # following ssl related config to be set when kafka is using SASL
+      ssl_truststore_location => "location of certificate file"
+      ssl_truststore_password => "password of cert file"
+      ssl_trusstore_type => "JKS"
+      security_protocol => "SASL_SSL"
+      sasl_mechanism => "PLAIN"
+      sasl_jass_config => org.apache.kafka.common.security.plai.PlainLoginModule required username='user' password='pass';"
+      ssl_keystore_type =>"JKS"
+      ssl_keystore_location => "same as ssl_truststore_location"
+      ssl_keystore_password => "same as ssl_truststore_password"
+
+   }
+}
+
+
+## multiple output
+# same request sent to multiple output
+output {
+   file {
+      path => "/tmp/outlog.log"
+   }
+   tcp {
+      host => "remot host ip"
+      port => "remote port"
+      id => "name for the outpu"
+      codec => "json_lines"
+      # codec => line { format => "%{message}" } # can be used to send the input content without any change to destination.
+   }
+}
+
+# select output based on data and condition
+output {
+   if "_grokprserfailure" not in [tags]
+      tcp { ... }
+
+   if "_grokprserfailure" in [tags]
+      file{ ... }
+   
+   
+}

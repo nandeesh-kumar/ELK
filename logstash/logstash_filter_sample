@@ -1,0 +1,116 @@
+## list of filter plugin
+https://www.elastic.co/guide/en/logstash/current/filter-plugins.html
+
+# message, host, @timestamp, @version, these 4 parameters are added by logstash in to the output. the actual input data is stored in message
+
+root@nandu-ThinkPad-T440p:/usr/share/logstash/bin# ./logstash -e 'input { stdin { } } output { stdout { } }'
+Using bundled JDK: /usr/share/logstash/jdk
+...
+...
+The stdin plugin is now waiting for input:
+[INFO ] 2022-07-26 19:48:40.601 [Agent thread] agent - Pipelines running {:count=>1, :running_pipelines=>[:main], :non_running_pipelines=>[]}
+this is a test
+{
+    "@timestamp" => 2022-07-26T14:19:03.392Z,
+          "host" => "nandu-ThinkPad-T440p",
+       "message" => "this is a test",
+      "@version" => "1"
+}
+
+
+
+### allow only required parameter to next filter
+filter{
+    prune{
+        whitelist_names => ["message"]
+    }
+}
+
+filter {
+    mutate {
+        remove_field => ["@timestamp","host","@version"]
+    }
+}
+
+## drop reqesut based on condition
+
+if ([message] !~ "test_data"){  # drop when test_data not presetn in message
+    drop { }
+}
+
+if [message] =~ "1234567"{   # drop when 1234567 is present in message
+    drop { }
+}
+
+
+ruby{   # drop reqeust when the recordtime parameter is older then 2 days from current date and time (seconds)
+    code => "event.cancel if (Time.now.to_i -event.get('recordtime').to_i) > 172800"
+}
+
+ruby{   # drop reqeust when the recordtime parameter is older then 2 days from current date and time (milli sec)
+    code => "event.cancel if (DateTime.now.strftime('%Q').to_i -event.get('recordtime').to_i) > 172800000"
+}
+
+
+# drop if the field2 is empty after json extract
+json{
+    source => "message"
+}
+if [field1][field2] {
+drop { }
+}
+
+## string to date
+
+if [recordtime] { # convert recordtime to date and store in recordtimestamp
+    date{
+    match => ["[recordtime]","yyyy-MM-dd HH:mm:ss"]
+    timezone => "Asia/Shanghai"
+    target => "recordtimestamp"
+}
+
+ruby{   # drop reqeust when the recordtimestamp parameter is older then 2 days from current date and time
+    code => "event.cancel if (Time.now.to_i -event.get('recordtimestamp').to_i) > 172800"
+}
+
+
+## process json parameter
+# if the whole message is already a json string
+
+json{
+    source => "message"
+}
+
+
+# process json inside a json
+
+
+
+## extracting field from string
+
+if the message = "testuser 1.1.1.1 2.2.2.2 12345 this is a test message"
+to extract each parameter grok can be used
+%{USERNAME:user}( *)%{USERNAME:srcip}( *)%{USERNAME:dstip}( *)%{NUMBER:reqeustid}( *)%{GREEDYDATA:usermessage}
+https://grokconstructor.appspot.com/do/match
+
+grok{
+    match {
+        "message" => "%{USERNAME:user}( *)%{USERNAME:srcip}( *)%{USERNAME:dstip}( *)%{NUMBER:reqeustid}( *)%{GREEDYDATA:usermessage}"
+    }
+}
+
+
+
+output:
+{
+"message":"testuser 1.1.1.1 2.2.2.2 12345 this is a test message"
+"dstip":"2.2.2.2"
+"srcip":"1.1.1.1"
+"usermessage":"this·is·a·test·message"
+"user":"testuser"
+"reqeustid":12345
+}
+
+
+
+

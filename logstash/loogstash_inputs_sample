@@ -1,0 +1,120 @@
+#### list of input plugin 
+https://www.elastic.co/guide/en/logstash/current/input-plugins.html
+
+
+### tcp input
+input {
+   tcp{
+    port => 5044
+    tags => ["tcp_reqeust"] # this tag can be added for identification, not mandatory
+   }
+}
+
+### udp input
+input {
+   udp{
+    port => 5044
+   }
+}
+
+
+### beats input
+input {
+   beats{
+    port => 5044
+   }
+}
+
+## file input
+input {
+   file {
+      path => "/tmp/input.log"
+   }
+}
+
+
+## kafka input
+
+input {
+   kafka {
+      bootstrat_servers => "*.*.*.*:9092,*.*.*.*:9092"
+      topics => ["kafka_topic"]
+      auto_offset_reset => "latest"
+      group_id => "kafka_group1"   # keep same group when multiple logstash host try to read from same topic
+      lient_id => "kafka_group1_client1"  # keep this different for each logstas host
+      consumer_threads => 3
+      codec => "json_lines"
+      # following ssl related config to be set when kafka is using SASL
+      ssl_truststore_location => "location of certificate file"
+      ssl_truststore_password => "password of cert file"
+      ssl_trusstore_type => "JKS"
+      security_protocol => "SASL_SSL"
+      sasl_mechanism => "PLAIN"
+      sasl_jass_config => org.apache.kafka.common.security.plai.PlainLoginModule required username='user' password='pass';"
+      ssl_keystore_type =>"JKS"
+      ssl_keystore_location => "same as ssl_truststore_location"
+      ssl_keystore_password => "same as ssl_truststore_password"
+
+   }
+}
+
+### jdbc input
+input{
+    jdbc{
+        jdbc_driver_library => "path of mysql-connector-java.jar file"
+        jdbc_driver_class => "com.mysql.jdbc.Driver"
+        jdbc_connection_string => "jdbc:mysql://db_ip:3306/database_name"
+        jdbc_user => "user"
+        jdbs_password => "pass"
+        jdbc_pagin_enabled => true
+        tracking_column => 'unix_ts_in_secs"
+        use_column_value => true
+        tracking_column_type => "numeric"
+        schedule => "*/5 * * * * *" # run every 5 sec
+        statement => "select *, UNIX_TIMESTAMP(record_time) as uninxts_in_secs from t_teat_table where UNIX_TIMESTAMP(record_time) > :sql_last_value AND recordtime < now() order by recordtime"
+        record_last_run => true
+        last_run_metadata_path => "path of host to store the data"
+    }
+}
+
+
+### S3 input
+# suppose the location and url for the bucket data is like https://s3.test.com/test_bucket/security/testlogs
+input{
+    s3{
+        access_key_id => "access key"
+        seret_access_key => "secret key"
+        region => "bucket region"
+        bucket => "test_bucket"
+        endpoint => "https://s3.test.com"
+        prefix => "security/testlogs"
+        temporary_derectory => "/tmp/logstash/s3/source"
+        backup_to_bucket => "test_bucket" # can configure if need take backup to other bucket
+        backup_add_prefix => ""
+        interval => "10" # every 10 sec
+        sincedb_path => "/tmp/logstash/s3/sincedb_path.txt"
+        additional_settings => {
+            force_path_style => true
+            follow_redirects => false
+        }
+        include_object_properties => true
+        delete => true         
+    }
+}
+
+
+### multiple input
+# singel pipeline can take multiple inputs.
+
+input {
+   tcp{
+    port => 5000
+    tags => ["tcp_reqeust"] # this tag can be added for identification, not mandatory
+   }
+
+   udp{
+    port => 6000
+    tags => ["udp_reqeust"] # this tag can be added for identification, not mandatory
+   }
+}
+
